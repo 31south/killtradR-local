@@ -133,13 +133,30 @@ killtrader journal parse-failures
 Example empty journal stats output:
 
 ```text
-       killtradR Journal Stats       
+       killtradR Journal Stats
 ┏━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
 ┃ Detector ┃ Samples ┃ Win Rate ┃ Avg PnL % ┃ Buckets       ┃
 ┡━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
 │ no rows  │       0 │    0.00% │    0.0000 │ journal empty │
 └──────────┴─────────┴──────────┴───────────┴───────────────┘
 ```
+
+## Development
+
+Install development tools and register the commit hooks:
+
+```bash
+pip install -e ".[dev]"
+pre-commit install
+```
+
+Run the hooks manually across the repo:
+
+```bash
+pre-commit run --all-files
+```
+
+Every commit runs the same gate locally: Ruff lint/format, file hygiene checks, key-material detection, the forbidden provider/data-term guard, and `pytest -q`. If any step fails, the commit is blocked until the issue is fixed.
 
 ## Safety
 

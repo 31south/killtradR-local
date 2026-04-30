@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Literal
 
@@ -20,7 +21,9 @@ class JournalSessionStats:
 
 
 class JournalWriter:
-    def __init__(self, path: str, flush_every_n: int = 50, flush_every_sec: float = 5.0, enabled: bool = True) -> None:
+    def __init__(
+        self, path: str, flush_every_n: int = 50, flush_every_sec: float = 5.0, enabled: bool = True
+    ) -> None:
         self.enabled = enabled
         self.store = JournalStore(path)
         self.flush_every_n = flush_every_n
@@ -48,10 +51,8 @@ class JournalWriter:
             return
         await self.queue.join()
         self._task.cancel()
-        try:
+        with suppress(asyncio.CancelledError):
             await self._task
-        except asyncio.CancelledError:
-            pass
         self._task = None
 
     async def _run(self) -> None:
@@ -64,7 +65,7 @@ class JournalWriter:
                 if len(batch) >= self.flush_every_n:
                     await self._flush(batch)
                     batch.clear()
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 if batch:
                     await self._flush(batch)
                     batch.clear()
@@ -90,7 +91,9 @@ class JournalWriter:
             self.stats.paper_pnl_quote += row.pnl_quote
 
 
-def normalize_detector_name(name: str) -> Literal["liquidity_grab", "stop_hunt", "order_book_imbalance"]:
+def normalize_detector_name(
+    name: str,
+) -> Literal["liquidity_grab", "stop_hunt", "order_book_imbalance"]:
     mapping = {
         "LiquidityGrabDetector": "liquidity_grab",
         "StopHuntDetector": "stop_hunt",

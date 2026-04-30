@@ -17,7 +17,12 @@ async def _fetch(path: str | None, sql: str, params: tuple[Any, ...] = ()) -> li
     return await store.fetch_all(sql, params)
 
 
-async def recent_triggers(limit: int = 100, detector: str | None = None, since_ms: int | None = None, path: str | None = None) -> list[dict[str, Any]]:
+async def recent_triggers(
+    limit: int = 100,
+    detector: str | None = None,
+    since_ms: int | None = None,
+    path: str | None = None,
+) -> list[dict[str, Any]]:
     clauses: list[str] = []
     params: list[Any] = []
     if detector:
@@ -42,7 +47,9 @@ async def recent_triggers(limit: int = 100, detector: str | None = None, since_m
     )
 
 
-async def decisions_for_detector(detector: str, since_ms: int | None = None, path: str | None = None) -> list[dict[str, Any]]:
+async def decisions_for_detector(
+    detector: str, since_ms: int | None = None, path: str | None = None
+) -> list[dict[str, Any]]:
     params: list[Any] = [detector]
     since_clause = ""
     if since_ms is not None:
@@ -51,7 +58,8 @@ async def decisions_for_detector(detector: str, since_ms: int | None = None, pat
     return await _fetch(
         path,
         f"""
-        SELECT d.*, t.detector, t.symbol, t.feed_source, o.pnl_pct, o.pnl_quote, o.exit_reason, o.is_paper
+        SELECT d.*, t.detector, t.symbol, t.feed_source,
+               o.pnl_pct, o.pnl_quote, o.exit_reason, o.is_paper
         FROM decisions d
         JOIN triggers t ON t.id = d.trigger_id
         LEFT JOIN outcomes o ON o.decision_id = d.id
@@ -62,7 +70,9 @@ async def decisions_for_detector(detector: str, since_ms: int | None = None, pat
     )
 
 
-async def win_rate_by_detector(since_ms: int | None = None, path: str | None = None) -> list[dict[str, Any]]:
+async def win_rate_by_detector(
+    since_ms: int | None = None, path: str | None = None
+) -> list[dict[str, Any]]:
     params: list[Any] = []
     since_clause = ""
     if since_ms is not None:
@@ -99,7 +109,9 @@ async def win_rate_by_detector(since_ms: int | None = None, path: str | None = N
     return results
 
 
-async def parse_failure_rate(since_ms: int | None = None, path: str | None = None) -> list[dict[str, Any]]:
+async def parse_failure_rate(
+    since_ms: int | None = None, path: str | None = None
+) -> list[dict[str, Any]]:
     params: list[Any] = []
     since_clause = ""
     if since_ms is not None:

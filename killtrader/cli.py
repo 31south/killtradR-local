@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -29,7 +28,9 @@ console = Console()
 
 
 class SupervisedRunHalt(Exception):
-    def __init__(self, symbol: str, feed_state: str, alerts: Sequence[str], cause: BaseException) -> None:
+    def __init__(
+        self, symbol: str, feed_state: str, alerts: Sequence[str], cause: BaseException
+    ) -> None:
         self.symbol = symbol
         self.feed_state = feed_state
         self.alerts = list(alerts)
@@ -49,7 +50,10 @@ def version() -> None:
 
 
 @app.command()
-def run(symbol: Optional[str] = typer.Option(None, "--symbol"), verbose: bool = typer.Option(False, "--verbose")) -> None:
+def run(
+    symbol: str | None = typer.Option(None, "--symbol"),
+    verbose: bool = typer.Option(False, "--verbose"),
+) -> None:
     settings = load_settings()
     if symbol:
         settings.symbol = symbol
@@ -59,10 +63,10 @@ def run(symbol: Optional[str] = typer.Option(None, "--symbol"), verbose: bool = 
         asyncio.run(_run(settings))
     except KeyboardInterrupt:
         console.print("[yellow]killtradR shutdown requested; exiting cleanly.[/yellow]")
-        raise typer.Exit(0)
+        raise typer.Exit(0) from None
     except asyncio.CancelledError:
         console.print("[yellow]killtradR shutdown requested; exiting cleanly.[/yellow]")
-        raise typer.Exit(0)
+        raise typer.Exit(0) from None
     except SupervisedRunHalt as exc:
         log.exception(
             "killtrader_halted",
@@ -72,11 +76,13 @@ def run(symbol: Optional[str] = typer.Option(None, "--symbol"), verbose: bool = 
             error=str(exc.cause),
         )
         _print_halt_banner(exc.symbol, exc.feed_state, exc.cause, exc.alerts)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
     except Exception as exc:
-        log.exception("killtrader_halted", symbol=settings.symbol, feed_state="unknown", error=str(exc))
+        log.exception(
+            "killtrader_halted", symbol=settings.symbol, feed_state="unknown", error=str(exc)
+        )
         _print_halt_banner(settings.symbol, "unknown", exc, [])
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
 
 
 async def _run(settings) -> None:
@@ -170,8 +176,14 @@ def _first_terminal_error(exc: BaseException) -> BaseException | None:
     return exc
 
 
-def _print_halt_banner(symbol: str, feed_state: str, exc: BaseException, alerts: Sequence[str]) -> None:
-    alert_text = "\n".join(f"• {alert}" for alert in alerts[-5:]) if alerts else "No choke alerts recorded before halt."
+def _print_halt_banner(
+    symbol: str, feed_state: str, exc: BaseException, alerts: Sequence[str]
+) -> None:
+    alert_text = (
+        "\n".join(f"• {alert}" for alert in alerts[-5:])
+        if alerts
+        else "No choke alerts recorded before halt."
+    )
     console.print(
         Panel.fit(
             f"[bold]Symbol:[/bold] {symbol}\n"
@@ -197,7 +209,9 @@ def journal_stats() -> None:
     if not rows:
         table.add_row("no rows", "0", "0.00%", "0.0000", "journal empty")
     for row in rows:
-        buckets = ", ".join(f"{name}:{value['sample_count']}" for name, value in row["confidence_buckets"].items())
+        buckets = ", ".join(
+            f"{name}:{value['sample_count']}" for name, value in row["confidence_buckets"].items()
+        )
         table.add_row(
             row["detector"],
             str(row["sample_count"]),
@@ -209,7 +223,10 @@ def journal_stats() -> None:
 
 
 @journal_app.command("recent")
-def journal_recent(limit: int = typer.Option(20, "--limit"), detector: Optional[str] = typer.Option(None, "--detector")) -> None:
+def journal_recent(
+    limit: int = typer.Option(20, "--limit"),
+    detector: str | None = typer.Option(None, "--detector"),
+) -> None:
     settings = load_settings()
     rows = asyncio.run(recent_triggers(limit=limit, detector=detector, path=settings.journal_path))
     table = Table(title="Recent Journal Rows")
@@ -245,7 +262,9 @@ def journal_parse_failures() -> None:
     if not rows:
         table.add_row("no rows", "0", "0", "0.00%")
     for row in rows:
-        table.add_row(row["model"], str(row["total"]), str(row["failed"]), f"{row['failure_rate'] * 100:.2f}%")
+        table.add_row(
+            row["model"], str(row["total"]), str(row["failed"]), f"{row['failure_rate'] * 100:.2f}%"
+        )
     console.print(table)
 
 

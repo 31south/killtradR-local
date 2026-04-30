@@ -26,7 +26,7 @@ class TradeSignal(BaseModel):
         return value.strip()
 
     @model_validator(mode="after")
-    def validate_prices(self) -> "TradeSignal":
+    def validate_prices(self) -> TradeSignal:
         if self.action == "pass":
             return self
         if self.action == "long" and not (self.stop < self.entry < self.tp1 <= self.tp2):

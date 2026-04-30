@@ -44,9 +44,13 @@ class OllamaSignalEngine:
 
     def _payload(self, event: DetectorEvent, strict: bool) -> dict:
         event_dict = asdict(event)
-        user_prompt = event_prompt(json.dumps(event_dict, default=str), self.settings.risk_pct_per_trade)
+        user_prompt = event_prompt(
+            json.dumps(event_dict, default=str), self.settings.risk_pct_per_trade
+        )
         if strict:
-            user_prompt += "\nYour previous response failed validation. Return valid JSON only; no prose."
+            user_prompt += (
+                "\nYour previous response failed validation. Return valid JSON only; no prose."
+            )
         return {
             "model": self.settings.ollama_model,
             "format": "json",
@@ -97,7 +101,14 @@ class OllamaSignalEngine:
         self.journal.enqueue(row)
         return row.id
 
-    def _write_decision(self, trigger_id: str | None, signal: TradeSignal | None, latency_ms: int, parse_ok: bool, raw_response: str) -> str | None:
+    def _write_decision(
+        self,
+        trigger_id: str | None,
+        signal: TradeSignal | None,
+        latency_ms: int,
+        parse_ok: bool,
+        raw_response: str,
+    ) -> str | None:
         if self.journal is None or trigger_id is None or not self.settings.journal_enabled:
             return None
         row = DecisionRow(

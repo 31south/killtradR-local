@@ -26,7 +26,13 @@ async def main() -> None:
             "choke_alerts_queued": bus.choke_alerts.qsize(),
         }
     except Exception as exc:
-        result = {"ok": False, "state_after_bad_primary_symbol": crossref.state.value, "error": repr(exc), "traceback": traceback.format_exc(), "choke_alerts_queued": bus.choke_alerts.qsize()}
+        result = {
+            "ok": False,
+            "state_after_bad_primary_symbol": crossref.state.value,
+            "error": repr(exc),
+            "traceback": traceback.format_exc(),
+            "choke_alerts_queued": bus.choke_alerts.qsize(),
+        }
     finally:
         await crossref.blofin_market.close()
         await crossref.binance.close()

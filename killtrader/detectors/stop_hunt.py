@@ -11,7 +11,9 @@ from killtrader.detectors.base import Detector
 class StopHuntDetector(Detector):
     name = "StopHuntDetector"
 
-    def __init__(self, settings: Settings, bus: EventBus, cluster_tolerance_pct: float = 0.05) -> None:
+    def __init__(
+        self, settings: Settings, bus: EventBus, cluster_tolerance_pct: float = 0.05
+    ) -> None:
         super().__init__(settings, bus)
         self.cluster_tolerance_pct = cluster_tolerance_pct
         self.candles: deque[Candle] = deque(maxlen=160)
@@ -41,8 +43,15 @@ class StopHuntDetector(Detector):
                         confidence=min(0.97, 0.72 + distance_pct + 0.1),
                         trigger_price=candle.close,
                         source=candle.source,
-                        thesis="engineered stop run through resistance got rejected; late longs are the exit liquidity",
-                        features={"swept_level": level, "volume": candle.volume, "avg_volume": avg_volume},
+                        thesis=(
+                            "engineered stop run through resistance got rejected; "
+                            "late longs are the exit liquidity"
+                        ),
+                        features={
+                            "swept_level": level,
+                            "volume": candle.volume,
+                            "avg_volume": avg_volume,
+                        },
                     )
                 )
                 return
@@ -55,22 +64,34 @@ class StopHuntDetector(Detector):
                         confidence=min(0.97, 0.72 + distance_pct + 0.1),
                         trigger_price=candle.close,
                         source=candle.source,
-                        thesis="engineered stop run through support got reclaimed; trapped shorts are fuel",
-                        features={"swept_level": level, "volume": candle.volume, "avg_volume": avg_volume},
+                        thesis=(
+                            "engineered stop run through support got reclaimed; "
+                            "trapped shorts are fuel"
+                        ),
+                        features={
+                            "swept_level": level,
+                            "volume": candle.volume,
+                            "avg_volume": avg_volume,
+                        },
                     )
                 )
                 return
 
     def _pivot_clusters(self, candles: list[Candle]) -> list[float]:
         raw_levels: list[float] = []
-        for prev_candle, candle, next_candle in zip(candles, candles[1:], candles[2:]):
+        for prev_candle, candle, next_candle in zip(
+            candles, candles[1:], candles[2:], strict=False
+        ):
             if candle.high > prev_candle.high and candle.high > next_candle.high:
                 raw_levels.append(candle.high)
             if candle.low < prev_candle.low and candle.low < next_candle.low:
                 raw_levels.append(candle.low)
         clusters: list[list[float]] = []
         for level in sorted(raw_levels):
-            if not clusters or abs(level - mean(clusters[-1])) / level * 100 > self.cluster_tolerance_pct:
+            if (
+                not clusters
+                or abs(level - mean(clusters[-1])) / level * 100 > self.cluster_tolerance_pct
+            ):
                 clusters.append([level])
             else:
                 clusters[-1].append(level)

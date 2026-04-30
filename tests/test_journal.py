@@ -11,7 +11,9 @@ from killtrader.journal.store import JournalStore
 
 def _real_market_snapshot() -> dict:
     depth = json.loads(Path("tests/fixtures/kraken_xbtusdt_depth_real_2026_04_29.json").read_text())
-    candles = json.loads(Path("tests/fixtures/kraken_xbtusdt_ohlc_real_2026_04_29.json").read_text())["candles"]
+    candles = json.loads(
+        Path("tests/fixtures/kraken_xbtusdt_ohlc_real_2026_04_29.json").read_text()
+    )["candles"]
     best_bid = float(depth["bids"][0][0])
     best_ask = float(depth["asks"][0][0])
     return {
@@ -19,8 +21,14 @@ def _real_market_snapshot() -> dict:
         "best_bid": best_bid,
         "best_ask": best_ask,
         "recent_ohlcv": candles[-5:],
-        "imbalance": (sum(float(level[1]) for level in depth["bids"]) - sum(float(level[1]) for level in depth["asks"]))
-        / (sum(float(level[1]) for level in depth["bids"]) + sum(float(level[1]) for level in depth["asks"])),
+        "imbalance": (
+            sum(float(level[1]) for level in depth["bids"])
+            - sum(float(level[1]) for level in depth["asks"])
+        )
+        / (
+            sum(float(level[1]) for level in depth["bids"])
+            + sum(float(level[1]) for level in depth["asks"])
+        ),
     }
 
 
@@ -41,7 +49,9 @@ def test_journal_store_and_queries_use_recorded_exchange_values(tmp_path) -> Non
             invoked_llm=True,
             feed_source="kraken",
             market_snapshot_json=compact_json(snapshot),
-            detector_meta_json=compact_json({"source": "Kraken public APIs", "captured_rows": len(snapshot["recent_ohlcv"])}),
+            detector_meta_json=compact_json(
+                {"source": "Kraken public APIs", "captured_rows": len(snapshot["recent_ohlcv"])}
+            ),
         )
         entry = float(first[4])
         decision = DecisionRow(
