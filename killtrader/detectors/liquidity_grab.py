@@ -28,11 +28,15 @@ class LiquidityGrabDetector(Detector):
         structure_low = min(c.low for c in recent)
         self.candles.append(candle)
 
-        high_excursion = (candle.high - structure_high) / structure_high * 100 if structure_high else 0
+        high_excursion = (
+            (candle.high - structure_high) / structure_high * 100 if structure_high else 0
+        )
         low_excursion = (structure_low - candle.low) / structure_low * 100 if structure_low else 0
 
         if high_excursion >= self.wick_excursion_pct and candle.close < structure_high:
-            confidence = min(0.99, 0.68 + high_excursion / 2 + self._reversal_strength(candle, "short"))
+            confidence = min(
+                0.99, 0.68 + high_excursion / 2 + self._reversal_strength(candle, "short")
+            )
             await self.bus.publish_detector_event(
                 DetectorEvent(
                     detector=self.name,
@@ -41,12 +45,20 @@ class LiquidityGrabDetector(Detector):
                     confidence=confidence,
                     trigger_price=candle.close,
                     source=candle.source,
-                    thesis="buy-side liquidity got raided above structure, then price snapped back inside the cage",
-                    features={"structure_high": structure_high, "wick_excursion_pct": high_excursion},
+                    thesis=(
+                        "buy-side liquidity got raided above structure, then price "
+                        "snapped back inside the cage"
+                    ),
+                    features={
+                        "structure_high": structure_high,
+                        "wick_excursion_pct": high_excursion,
+                    },
                 )
             )
         elif low_excursion >= self.wick_excursion_pct and candle.close > structure_low:
-            confidence = min(0.99, 0.68 + low_excursion / 2 + self._reversal_strength(candle, "long"))
+            confidence = min(
+                0.99, 0.68 + low_excursion / 2 + self._reversal_strength(candle, "long")
+            )
             await self.bus.publish_detector_event(
                 DetectorEvent(
                     detector=self.name,
@@ -55,7 +67,10 @@ class LiquidityGrabDetector(Detector):
                     confidence=confidence,
                     trigger_price=candle.close,
                     source=candle.source,
-                    thesis="sell-side liquidity got harvested below structure, then the trap door slammed shut",
+                    thesis=(
+                        "sell-side liquidity got harvested below structure, then the "
+                        "trap door slammed shut"
+                    ),
                     features={"structure_low": structure_low, "wick_excursion_pct": low_excursion},
                 )
             )

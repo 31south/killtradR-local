@@ -69,10 +69,18 @@ class Dashboard:
         filled = int(min(width, abs(self.imbalance_delta) * width))
         bar = "█" * filled + "░" * (width - filled)
         side = "BID" if self.imbalance_delta >= 0 else "ASK"
-        return Panel(Text(f"{side} {bar} {self.imbalance_delta:+.2f}"), title="Order Book Imbalance", border_style="magenta")
+        return Panel(
+            Text(f"{side} {bar} {self.imbalance_delta:+.2f}"),
+            title="Order Book Imbalance",
+            border_style="magenta",
+        )
 
     def _positions_panel(self) -> Panel:
-        body = "\n".join(self.position_lines) if self.position_lines else "No active positions tracked."
+        body = (
+            "\n".join(self.position_lines)
+            if self.position_lines
+            else "No active positions tracked."
+        )
         return Panel(body, title="Position State + Unrealized P&L", border_style="green")
 
     def _choke_panel(self) -> Panel:

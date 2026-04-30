@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from killtrader.config import Settings
-from killtrader.core.errors import ExchangeExecutionError, RiskLimitExceededError
+from killtrader.core.errors import ExchangeExecutionError
 from killtrader.core.logger import get_logger
 from killtrader.exchange.blofin import BloFinExchange
 from killtrader.execution.risk import PositionState, RiskManager
@@ -26,13 +26,19 @@ class Trader:
             raise ExchangeExecutionError("TRADE_ENABLED=false; execution blocked by configuration")
         side = "buy" if signal.action == "long" else "sell"
         await self.exchange.place_market_order(self.settings.symbol, side, size)
-        await self.exchange.set_tp_sl(self.settings.symbol, signal.action, size, signal.stop, signal.tp1, signal.tp2)
-        position = PositionState(symbol=self.settings.symbol, side=signal.action, entry=signal.entry, size=size)
+        await self.exchange.set_tp_sl(
+            self.settings.symbol, signal.action, size, signal.stop, signal.tp1, signal.tp2
+        )
+        position = PositionState(
+            symbol=self.settings.symbol, side=signal.action, entry=signal.entry, size=size
+        )
         self.risk.positions.append(position)
         log.info("trade_executed", action=signal.action, entry=signal.entry, size=size)
         return position
 
-    async def cancel_if_invalidated(self, order_id: str, latest_price: float, signal: TradeSignal) -> None:
+    async def cancel_if_invalidated(
+        self, order_id: str, latest_price: float, signal: TradeSignal
+    ) -> None:
         invalidated = (signal.action == "long" and latest_price <= signal.stop) or (
             signal.action == "short" and latest_price >= signal.stop
         )

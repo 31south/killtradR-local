@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 from time import time_ns
-from typing import AsyncIterator
 
 from killtrader.config import Settings
 from killtrader.core.bus import Candle, OrderBookLevel, OrderBookSnapshot
@@ -21,8 +21,12 @@ class BinancePerpFeed:
         try:
             import ccxt.async_support as ccxt  # type: ignore
         except Exception as exc:  # pragma: no cover
-            raise SourceUnavailableError("ccxt is not importable; install project dependencies") from exc
-        self._exchange = ccxt.binanceusdm({"enableRateLimit": True, "options": {"defaultType": "future"}})
+            raise SourceUnavailableError(
+                "ccxt is not importable; install project dependencies"
+            ) from exc
+        self._exchange = ccxt.binanceusdm(
+            {"enableRateLimit": True, "options": {"defaultType": "future"}}
+        )
         log.info("binance_feed_connected", symbol=self.settings.binance_symbol)
 
     async def close(self) -> None:
@@ -54,7 +58,9 @@ class BinancePerpFeed:
             await self.connect()
         assert self._exchange is not None
         try:
-            rows = await self._exchange.fetch_ohlcv(self.settings.binance_symbol, timeframe=timeframe, limit=limit)
+            rows = await self._exchange.fetch_ohlcv(
+                self.settings.binance_symbol, timeframe=timeframe, limit=limit
+            )
         except Exception as exc:
             raise SourceUnavailableError("Binance perps OHLCV fetch failed") from exc
         if not rows:
@@ -73,7 +79,9 @@ class BinancePerpFeed:
             for row in rows
         ]
 
-    async def stream_order_book(self, poll_seconds: float = 1.0) -> AsyncIterator[OrderBookSnapshot]:
+    async def stream_order_book(
+        self, poll_seconds: float = 1.0
+    ) -> AsyncIterator[OrderBookSnapshot]:
         while True:
             yield await self.fetch_order_book_once()
             await asyncio.sleep(poll_seconds)

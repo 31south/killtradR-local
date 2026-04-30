@@ -15,7 +15,12 @@ async def main() -> None:
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             response = await client.get(url)
-            result = {"ok": True, "url": url, "status_code": response.status_code, "body": response.text[:1000]}
+            result = {
+                "ok": True,
+                "url": url,
+                "status_code": response.status_code,
+                "body": response.text[:1000],
+            }
     except Exception as exc:
         result = {"ok": False, "url": url, "error": repr(exc), "traceback": traceback.format_exc()}
     print(json.dumps(result, indent=2, default=str))

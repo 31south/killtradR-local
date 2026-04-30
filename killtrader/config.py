@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     max_daily_loss_pct: float = Field(default=3.0, alias="MAX_DAILY_LOSS_PCT")
     trade_enabled: bool = Field(default=False, alias="TRADE_ENABLED")
 
-    detector_confidence_threshold: float = Field(default=0.75, alias="DETECTOR_CONFIDENCE_THRESHOLD")
+    detector_confidence_threshold: float = Field(
+        default=0.75, alias="DETECTOR_CONFIDENCE_THRESHOLD"
+    )
     liquidity_grab_lookback_bars: int = Field(default=50, alias="LIQUIDITY_GRAB_LOOKBACK_BARS")
     stop_hunt_retrace_window_sec: int = Field(default=30, alias="STOP_HUNT_RETRACE_WINDOW_SEC")
 

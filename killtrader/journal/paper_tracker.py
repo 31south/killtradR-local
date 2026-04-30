@@ -26,7 +26,9 @@ class PaperOutcomeTracker:
     def track(self, decision_id: str | None, signal: TradeSignal) -> None:
         if decision_id is None or signal.action == "pass":
             return
-        self.positions[decision_id] = PaperPosition(decision_id=decision_id, signal=signal, opened_ts_ms=now_ms())
+        self.positions[decision_id] = PaperPosition(
+            decision_id=decision_id, signal=signal, opened_ts_ms=now_ms()
+        )
 
     def on_order_book(self, snapshot: OrderBookSnapshot) -> None:
         if not snapshot.bids or not snapshot.asks:
@@ -35,7 +37,9 @@ class PaperOutcomeTracker:
         closed: list[str] = []
         current_ms = snapshot.timestamp_ms or now_ms()
         for decision_id, position in self.positions.items():
-            exit_reason = self._exit_reason(position.signal, mid, current_ms - position.opened_ts_ms)
+            exit_reason = self._exit_reason(
+                position.signal, mid, current_ms - position.opened_ts_ms
+            )
             pnl_pct = self._pnl_pct(position.signal, mid)
             position.max_favorable_excursion = max(position.max_favorable_excursion, pnl_pct)
             position.max_adverse_excursion = min(position.max_adverse_excursion, pnl_pct)

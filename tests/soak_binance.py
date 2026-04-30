@@ -26,7 +26,13 @@ async def main() -> None:
             "last_candle": asdict(candles[-1]),
         }
     except Exception as exc:
-        result = {"ok": False, "source": "binanceusdm", "symbol": settings.binance_symbol, "error": repr(exc), "traceback": traceback.format_exc()}
+        result = {
+            "ok": False,
+            "source": "binanceusdm",
+            "symbol": settings.binance_symbol,
+            "error": repr(exc),
+            "traceback": traceback.format_exc(),
+        }
     finally:
         await feed.close()
     print(json.dumps(result, indent=2, default=str))

@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from time import time
 from typing import Any, Literal
 
-
 Side = Literal["long", "short"]
 
 

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+from collections.abc import AsyncIterator
 from time import time_ns
-from typing import Any, AsyncIterator
+from typing import Any
 
 from killtrader.config import Settings
 from killtrader.core.bus import Candle, OrderBookLevel, OrderBookSnapshot
@@ -31,7 +32,9 @@ class BloFinMarketFeed:
         try:
             import ccxt.async_support as ccxt  # type: ignore
         except Exception as exc:  # pragma: no cover
-            raise SourceUnavailableError("ccxt is not importable; install project dependencies") from exc
+            raise SourceUnavailableError(
+                "ccxt is not importable; install project dependencies"
+            ) from exc
         self._exchange = ccxt.blofin({"enableRateLimit": True, "options": {"defaultType": "swap"}})
 
     async def close(self) -> None:
@@ -115,12 +118,16 @@ class BloFinExchange:
         self._require_credentials()
         if self.settings.use_demo:
             raise ExchangeExecutionError(
-                "installed blofin package does not expose DemoClient; keep TRADE_ENABLED=false or set USE_DEMO=false only for intentional live execution"
+                "installed blofin package does not expose DemoClient; keep "
+                "TRADE_ENABLED=false or set USE_DEMO=false only for intentional "
+                "live execution"
             )
         try:
             from blofin.client import BloFinClient, PublicAPI, TradingAPI  # type: ignore
         except Exception as exc:  # pragma: no cover - depends on user install
-            raise ExchangeExecutionError("blofin package is not importable; install project dependencies") from exc
+            raise ExchangeExecutionError(
+                "blofin package is not importable; install project dependencies"
+            ) from exc
 
         self._client = BloFinClient(
             api_key=self.settings.blofin_api_key,
@@ -147,18 +154,30 @@ class BloFinExchange:
                 return result
             except Exception as exc:
                 if attempt == 2:
-                    raise ExchangeExecutionError(f"BloFin {func_name} failed after retries") from exc
+                    raise ExchangeExecutionError(
+                        f"BloFin {func_name} failed after retries"
+                    ) from exc
                 await asyncio.sleep(0.5 * (attempt + 1))
 
     async def place_market_order(self, symbol: str, side: str, size: float) -> Any:
-        return await self._call("place_order", instId=symbol, tdMode="cross", side=side, ordType="market", sz=str(size))
+        return await self._call(
+            "place_order", instId=symbol, tdMode="cross", side=side, ordType="market", sz=str(size)
+        )
 
     async def place_limit_order(self, symbol: str, side: str, size: float, price: float) -> Any:
         return await self._call(
-            "place_order", instId=symbol, tdMode="cross", side=side, ordType="limit", sz=str(size), px=str(price)
+            "place_order",
+            instId=symbol,
+            tdMode="cross",
+            side=side,
+            ordType="limit",
+            sz=str(size),
+            px=str(price),
         )
 
-    async def set_tp_sl(self, symbol: str, side: str, size: float, stop: float, tp1: float, tp2: float) -> Any:
+    async def set_tp_sl(
+        self, symbol: str, side: str, size: float, stop: float, tp1: float, tp2: float
+    ) -> Any:
         return await self._call(
             "place_algo_order",
             instId=symbol,
@@ -179,18 +198,30 @@ class BloFinExchange:
 
     async def stream_candles(self, symbol: str) -> AsyncIterator[Candle]:
         raise SourceUnavailableError(
-            "BloFin websocket adapter must be wired to the installed blofin SDK version before streaming candles"
+            "BloFin websocket adapter must be wired to the installed blofin SDK "
+            "version before streaming candles"
         )
 
     async def stream_order_book(self, symbol: str) -> AsyncIterator[OrderBookSnapshot]:
         raise SourceUnavailableError(
-            "BloFin websocket adapter must be wired to the installed blofin SDK version before streaming order books"
+            "BloFin websocket adapter must be wired to the installed blofin SDK "
+            "version before streaming order books"
         )
 
 
-def order_book_from_raw(source: str, symbol: str, timestamp_ms: int, raw: dict[str, Any]) -> OrderBookSnapshot:
-    bids = [OrderBookLevel(price=float(price), size=float(size)) for price, size, *_ in raw.get("bids", [])]
-    asks = [OrderBookLevel(price=float(price), size=float(size)) for price, size, *_ in raw.get("asks", [])]
+def order_book_from_raw(
+    source: str, symbol: str, timestamp_ms: int, raw: dict[str, Any]
+) -> OrderBookSnapshot:
+    bids = [
+        OrderBookLevel(price=float(price), size=float(size))
+        for price, size, *_ in raw.get("bids", [])
+    ]
+    asks = [
+        OrderBookLevel(price=float(price), size=float(size))
+        for price, size, *_ in raw.get("asks", [])
+    ]
     if not bids or not asks:
         raise SourceUnavailableError(f"{source} returned an empty order book for {symbol}")
-    return OrderBookSnapshot(source=source, symbol=symbol, timestamp_ms=timestamp_ms, bids=bids, asks=asks)
+    return OrderBookSnapshot(
+        source=source, symbol=symbol, timestamp_ms=timestamp_ms, bids=bids, asks=asks
+    )

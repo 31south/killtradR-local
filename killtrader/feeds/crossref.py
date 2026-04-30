@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
+from collections.abc import Awaitable, Callable
 from enum import Enum
 from time import time_ns
-from typing import Awaitable, Callable
 
 from killtrader.config import Settings
 from killtrader.core.bus import Candle, ChokeAlert, EventBus, OrderBookSnapshot
@@ -25,7 +25,12 @@ class FeedState(str, Enum):
 
 
 class CrossReferenceCoordinator:
-    def __init__(self, settings: Settings, bus: EventBus, blofin_fetch: Callable[[], Awaitable[OrderBookSnapshot]] | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        bus: EventBus,
+        blofin_fetch: Callable[[], Awaitable[OrderBookSnapshot]] | None = None,
+    ) -> None:
         self.settings = settings
         self.bus = bus
         self.blofin_fetch = blofin_fetch
@@ -47,7 +52,10 @@ class CrossReferenceCoordinator:
                 if latency_ms <= self.settings.choke_threshold_ms:
                     self.state = FeedState.BLOFIN_PRIMARY
                     return snapshot
-                await self._alert(latency_ms, "[CHOKE ALERT] BloFin latency exceeded threshold; switching signal feed")
+                await self._alert(
+                    latency_ms,
+                    "[CHOKE ALERT] BloFin latency exceeded threshold; switching signal feed",
+                )
             except SourceUnavailableError as exc:
                 await self._alert(float("inf"), f"[CHOKE ALERT] BloFin source unavailable: {exc}")
 
@@ -65,7 +73,9 @@ class CrossReferenceCoordinator:
             return snapshot
         except Exception as aggr_error:
             self.state = FeedState.HALTED
-            raise NoDataAvailableError("all configured real market data sources failed; trading halted") from aggr_error
+            raise NoDataAvailableError(
+                "all configured real market data sources failed; trading halted"
+            ) from aggr_error
 
     async def next_candles(self) -> list[Candle]:
         try:
@@ -73,16 +83,22 @@ class CrossReferenceCoordinator:
             self.state = FeedState.BLOFIN_PRIMARY
             return candles
         except SourceUnavailableError as blofin_error:
-            await self._alert(float("inf"), f"[CHOKE ALERT] BloFin OHLCV unavailable: {blofin_error}")
+            await self._alert(
+                float("inf"), f"[CHOKE ALERT] BloFin OHLCV unavailable: {blofin_error}"
+            )
         try:
             candles = await self.binance.fetch_candles_once(limit=120)
             self.state = FeedState.BINANCE_FALLBACK
             return candles
         except SourceUnavailableError as binance_error:
             self.state = FeedState.HALTED
-            raise NoDataAvailableError("all configured real OHLCV sources failed; trading halted") from binance_error
+            raise NoDataAvailableError(
+                "all configured real OHLCV sources failed; trading halted"
+            ) from binance_error
 
     async def _alert(self, latency_ms: float, message: str) -> None:
         self.last_alerts.append(message)
         log.warning("choke_alert", latency_ms=latency_ms, message=message)
-        await self.bus.publish_choke_alert(ChokeAlert(active_source=self.state.value, latency_ms=latency_ms, message=message))
+        await self.bus.publish_choke_alert(
+            ChokeAlert(active_source=self.state.value, latency_ms=latency_ms, message=message)
+        )

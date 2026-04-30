@@ -93,10 +93,21 @@ class JournalStore:
         await db.execute(
             """
             INSERT OR REPLACE INTO triggers
-            (id, ts_ms, symbol, detector, confidence, invoked_llm, feed_source, market_snapshot_json, detector_meta_json)
+            (id, ts_ms, symbol, detector, confidence, invoked_llm, feed_source,
+             market_snapshot_json, detector_meta_json)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (row.id, row.ts_ms, row.symbol, row.detector, row.confidence, int(row.invoked_llm), row.feed_source, row.market_snapshot_json, row.detector_meta_json),
+            (
+                row.id,
+                row.ts_ms,
+                row.symbol,
+                row.detector,
+                row.confidence,
+                int(row.invoked_llm),
+                row.feed_source,
+                row.market_snapshot_json,
+                row.detector_meta_json,
+            ),
         )
 
     @staticmethod

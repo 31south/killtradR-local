@@ -7,9 +7,24 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
 
-
-DetectorName = Literal["liquidity_grab", "stop_hunt", "order_book_imbalance", "LiquidityGrabDetector", "StopHuntDetector", "OrderBookImbalanceDetector"]
-FeedSource = Literal["blofin", "binance", "aggr_trade", "kraken", "BloFin-primary", "Binance-fallback", "aggr.trade-fallback", "HALTED"]
+DetectorName = Literal[
+    "liquidity_grab",
+    "stop_hunt",
+    "order_book_imbalance",
+    "LiquidityGrabDetector",
+    "StopHuntDetector",
+    "OrderBookImbalanceDetector",
+]
+FeedSource = Literal[
+    "blofin",
+    "binance",
+    "aggr_trade",
+    "kraken",
+    "BloFin-primary",
+    "Binance-fallback",
+    "aggr.trade-fallback",
+    "HALTED",
+]
 Action = Literal["long", "short", "pass"]
 ExitReason = Literal["tp1", "tp2", "stop", "manual", "invalidated", "expired", "paper"]
 

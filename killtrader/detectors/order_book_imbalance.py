@@ -44,7 +44,10 @@ class OrderBookImbalanceDetector(Detector):
                     confidence=min(0.96, 0.66 + abs(rolling) * 0.55 + refill_score * 0.025),
                     trigger_price=mid,
                     source=order_book.source,
-                    thesis="bid-side absorption keeps refilling; sellers are punching a wall and getting trapped",
+                    thesis=(
+                        "bid-side absorption keeps refilling; sellers are punching "
+                        "a wall and getting trapped"
+                    ),
                     features={"rolling_imbalance": rolling, "refill_score": refill_score},
                 )
             )
@@ -57,7 +60,10 @@ class OrderBookImbalanceDetector(Detector):
                     confidence=min(0.96, 0.66 + abs(rolling) * 0.55 + refill_score * 0.025),
                     trigger_price=mid,
                     source=order_book.source,
-                    thesis="ask-side absorption keeps refilling; buyers are chewing steel and running out of teeth",
+                    thesis=(
+                        "ask-side absorption keeps refilling; buyers are chewing "
+                        "steel and running out of teeth"
+                    ),
                     features={"rolling_imbalance": rolling, "refill_score": refill_score},
                 )
             )

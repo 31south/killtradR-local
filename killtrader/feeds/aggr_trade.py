@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import json
+from collections.abc import AsyncIterator
 from time import time_ns
-from typing import AsyncIterator
 
 import websockets
 
@@ -28,8 +27,14 @@ class AggrTradeFeed:
 
     async def stream_order_book(self) -> AsyncIterator[OrderBookSnapshot]:
         try:
-            async with websockets.connect(self.settings.aggr_trade_ws_url, ping_interval=20) as websocket:
-                await websocket.send(json.dumps({"op": "subscribe", "channel": "orderbook", "symbol": self.settings.symbol}))
+            async with websockets.connect(
+                self.settings.aggr_trade_ws_url, ping_interval=20
+            ) as websocket:
+                await websocket.send(
+                    json.dumps(
+                        {"op": "subscribe", "channel": "orderbook", "symbol": self.settings.symbol}
+                    )
+                )
                 async for raw in websocket:
                     parsed = json.loads(raw)
                     snapshot = self._parse_payload(parsed)
@@ -48,7 +53,9 @@ class AggrTradeFeed:
         return OrderBookSnapshot(
             source="aggr.trade",
             symbol=str(payload.get("symbol") or self.settings.symbol),
-            timestamp_ms=int(payload.get("timestamp") or payload.get("ts") or time_ns() // 1_000_000),
+            timestamp_ms=int(
+                payload.get("timestamp") or payload.get("ts") or time_ns() // 1_000_000
+            ),
             bids=bids,
             asks=asks,
         )
