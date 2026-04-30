@@ -1,0 +1,47 @@
+{
+  "source": "wss://dstream.binance.com/ws",
+  "subscription": {
+    "method": "SUBSCRIBE",
+    "params": ["btcusd_perp@aggTrade", "btcusd_perp@forceOrder"],
+    "id": 1
+  },
+  "captured_at": "2026-04-30T10:56:00Z",
+  "messages": [
+    {
+      "e": "aggTrade",
+      "E": 1777546620529,
+      "a": 479706113,
+      "s": "BTCUSD_PERP",
+      "p": "75951.2",
+      "q": "6",
+      "f": 1121540255,
+      "l": 1121540260,
+      "T": 1777546620527,
+      "m": false
+    },
+    {
+      "e": "aggTrade",
+      "E": 1777546620529,
+      "a": 479706114,
+      "s": "BTCUSD_PERP",
+      "p": "75951.8",
+      "q": "1",
+      "f": 1121540261,
+      "l": 1121540261,
+      "T": 1777546620528,
+      "m": false
+    },
+    {
+      "e": "aggTrade",
+      "E": 1777546624446,
+      "a": 479706117,
+      "s": "BTCUSD_PERP",
+      "p": "75953.2",
+      "q": "6",
+      "f": 1121540264,
+      "l": 1121540269,
+      "T": 1777546624433,
+      "m": false
+    }
+  ]
+}

@@ -9,10 +9,10 @@ killtradR-local is a local-first market-maker counter-trader for BloFin perpetua
                 +-------------+---------------+
                               |
                               v
-+----------------+     +------+-------+       +-----------------------+
-| Binance Perps  | --> | Honesty     | ----> | Async detector bus    |
-| aggr.trade WS  |     | Layer       |       | liquidity/stop/OB     |
-+----------------+     +------+-------+       +-----------+-----------+
++----------------+     +------+-------+       +------------------------+
+| Binance USDT-M | --> | Honesty     | ----> | Async detector bus     |
+| Binance COIN-M |     | Layer       |       | liq/stop/OB/cascade    |
++----------------+     +------+-------+       +-----------+------------+
                               |                           |
                               v                           v
                     [CHOKE ALERT]                 Local Ollama JSON
@@ -68,6 +68,7 @@ OLLAMA_HOST=http://localhost:11434
 OLLAMA_MODEL=deepseek-coder
 SYMBOL=BTC-USDT
 BINANCE_SYMBOL=BTC/USDT:USDT
+BINANCE_COINM_SYMBOL=btcusd_perp
 TRADE_ENABLED=false
 ```
 
@@ -140,6 +141,23 @@ Example empty journal stats output:
 │ no rows  │       0 │    0.00% │    0.0000 │ journal empty │
 └──────────┴─────────┴──────────┴───────────┴───────────────┘
 ```
+
+## Binance COIN-M Liquidation Feed
+
+The fourth detector consumes a real Binance Delivery Futures websocket captured from the browser flow:
+
+```text
+wss://dstream.binance.com/ws
+{"method":"SUBSCRIBE","params":["btcusd_perp@aggTrade","btcusd_perp@forceOrder"],"id":1}
+```
+
+`aggTrade` supplies live COIN-M trade ticks. `forceOrder` supplies forced-liquidation events, which are prime killtradR territory: when a directionally biased liquidation cascade prints, the detector treats it as forced flow and prepares a fade thesis for the local model.
+
+`LiquidationCascadeDetector` tracks a rolling window of COIN-M liquidations and fires when notional or count thresholds are exceeded with strong directional bias. Long-liquidation cascades imply panic selling and bias a long fade; short-liquidation cascades imply squeeze buying and bias a short fade.
+
+COIN-M is an inverse BTC-settled contract, not the same instrument as BloFin or Binance USDT-M. The prices should correlate tightly but can diverge by normal basis. killtradR logs that basis and only warns when `COINM_SPREAD_ALERT_BPS` is exceeded.
+
+This replaces the previous aggr.trade adapter, which pointed at a non-upgrading endpoint and could not be validated as a real websocket source from this environment.
 
 ## Development
 

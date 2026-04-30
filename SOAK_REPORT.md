@@ -13,7 +13,7 @@ Passed:
 - Full import smoke check passed:
   - `killtrader.cli`
   - `killtrader.feeds.binance_ccxt`
-  - `killtrader.feeds.aggr_trade`
+  - `killtrader.feeds.aggr_trade` (since replaced by `killtrader.feeds.binance_coinm`)
   - `killtrader.feeds.crossref`
   - `killtrader.exchange.blofin`
   - all three detector modules
@@ -223,6 +223,29 @@ No order attempts were made during this soak.
 
 No invented market data, generated ticks, placeholder books, or test-double market sources were added for this soak. When Binance, aggr.trade, or Ollama were unavailable, the probes reported the real errors and stopped that path.
 
+## 2026-04-30 Binance COIN-M wired
+
+The user captured a real Binance Delivery Futures websocket subscription from browser devtools:
+
+```text
+wss://dstream.binance.com/ws
+{"method":"SUBSCRIBE","params":["btcusd_perp@aggTrade","btcusd_perp@forceOrder"],"id":1}
+```
+
+Implementation update:
+
+- The non-upgrading aggr.trade placeholder adapter was removed.
+- `killtrader.feeds.binance_coinm.BinanceCoinMFeed` now subscribes to `aggTrade` and `forceOrder` on Binance COIN-M.
+- `LiquidationCascadeDetector` consumes real COIN-M liquidation events and emits fade signals when a biased liquidation cascade exceeds configured count/notional thresholds.
+- Cross-reference failover is now `BloFin → Binance USDT-M → Binance COIN-M → HALT`.
+- COIN-M basis spread is logged separately because the inverse BTC-settled contract is correlated with, but not identical to, USDT-margined perps.
+
+Sandbox reachability:
+
+- `wss://dstream.binance.com/ws` connected successfully.
+- Captured 15 real `aggTrade` events in a 20-second window and saved a recorded real fixture at `tests/fixtures/binance_coinm_real_aggtrade_2026_04_30.json`.
+- No `forceOrder` events arrived during that short window, so liquidation parser/detector tests skip their force-order fixture checks until a real liquidation fixture is captured.
+
 ## What must be validated locally
 
 The user's local environment is expected to differ from this sandbox in the important ways that matter:
@@ -230,8 +253,8 @@ The user's local environment is expected to differ from this sandbox in the impo
 1. Ollama should be running locally with `deepseek-coder` pulled:
    - `ollama pull deepseek-coder`
    - `curl http://localhost:11434/api/tags`
-2. Binance may work from the user's own network even though this sandbox gets HTTP `451`.
-3. The correct aggr.trade browser websocket URL and subscription payload should be captured from the user's local browser devtools and set via `AGGR_TRADE_WS_URL` / adapter wiring.
+2. Binance USDT-M may work from the user's own network even though this sandbox gets HTTP `451`.
+3. Binance COIN-M websocket is reachable from this sandbox and should provide liquidation events whenever the market prints them.
 4. BloFin credentials should be inserted into `.env` only on the user's own machine.
 5. Keep `TRADE_ENABLED=false` during the first full local soak so signals and dashboard behavior can be reviewed before any execution path is enabled.
 
@@ -239,5 +262,5 @@ The user's local environment is expected to differ from this sandbox in the impo
 
 1. Update CLI task supervision so `feed_loop`, `signal_loop`, or `alert_loop` exceptions cancel the other tasks and surface immediately.
 2. Add the signal journal requested next: persist every real detector event, Ollama decision, source state, and later realized outcome for threshold tuning.
-3. Validate and wire the exact aggr.trade websocket endpoint/protocol from browser devtools.
+3. Capture a real `forceOrder` fixture during an active liquidation burst and commit it for parser/detector regression coverage.
 4. Re-run the full soak locally with Ollama online and unblocked Binance/BloFin network access.

@@ -29,7 +29,25 @@ class Settings(BaseSettings):
 
     choke_threshold_ms: int = Field(default=500, alias="CHOKE_THRESHOLD_MS")
     binance_symbol: str = Field(default="BTC/USDT:USDT", alias="BINANCE_SYMBOL")
-    aggr_trade_ws_url: str = Field(default="wss://api.aggr.trade", alias="AGGR_TRADE_WS_URL")
+    binance_coinm_ws_url: str = Field(
+        default="wss://dstream.binance.com/ws", alias="BINANCE_COINM_WS_URL"
+    )
+    binance_coinm_symbol: str = Field(default="btcusd_perp", alias="BINANCE_COINM_SYMBOL")
+    binance_coinm_contract_value_usd: float = Field(
+        default=100.0, alias="BINANCE_COINM_CONTRACT_VALUE_USD"
+    )
+    coinm_spread_alert_bps: float = Field(default=50.0, alias="COINM_SPREAD_ALERT_BPS")
+
+    liquidation_cascade_window_sec: int = Field(default=60, alias="LIQUIDATION_CASCADE_WINDOW_SEC")
+    liquidation_cascade_usd_threshold: float = Field(
+        default=5_000_000.0, alias="LIQUIDATION_CASCADE_USD_THRESHOLD"
+    )
+    liquidation_cascade_count_threshold: int = Field(
+        default=20, alias="LIQUIDATION_CASCADE_COUNT_THRESHOLD"
+    )
+    liquidation_cascade_directional_bias: float = Field(
+        default=0.70, alias="LIQUIDATION_CASCADE_DIRECTIONAL_BIAS"
+    )
 
     verbose: bool = Field(default=False, alias="VERBOSE")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
@@ -60,6 +78,34 @@ class Settings(BaseSettings):
     def positive_int(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("journal integer settings must be positive")
+        return value
+
+    @field_validator(
+        "liquidation_cascade_window_sec",
+        "liquidation_cascade_count_threshold",
+    )
+    @classmethod
+    def positive_liquidation_int(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("liquidation cascade integer settings must be positive")
+        return value
+
+    @field_validator(
+        "binance_coinm_contract_value_usd",
+        "coinm_spread_alert_bps",
+        "liquidation_cascade_usd_threshold",
+    )
+    @classmethod
+    def positive_market_float(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("market thresholds must be positive")
+        return value
+
+    @field_validator("liquidation_cascade_directional_bias")
+    @classmethod
+    def directional_bias_range(cls, value: float) -> float:
+        if not 0.5 < value <= 1.0:
+            raise ValueError("directional bias must be > 0.5 and <= 1.0")
         return value
 
     @field_validator("journal_flush_every_sec")
