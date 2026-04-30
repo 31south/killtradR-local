@@ -36,6 +36,7 @@ async def main() -> None:
     finally:
         await crossref.blofin_market.close()
         await crossref.binance.close()
+        await crossref.binance_coinm.close()
     print(json.dumps(result, indent=2, default=str))
 
 

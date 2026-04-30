@@ -8,6 +8,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from killtrader.core.bus import BinanceCoinMForceOrderEvent
 from killtrader.feeds.crossref import FeedState
 from killtrader.journal.writer import JournalSessionStats
 from killtrader.signal.schema import TradeSignal
@@ -22,6 +23,9 @@ class Dashboard:
         self.imbalance_delta = 0.0
         self.position_lines: list[str] = []
         self.journal_stats = JournalSessionStats()
+        self.recent_liquidations: deque[BinanceCoinMForceOrderEvent] = deque(maxlen=5)
+        self.long_liq_notional = 0.0
+        self.short_liq_notional = 0.0
 
     def add_signal(self, signal: TradeSignal) -> None:
         self.signals.appendleft(signal)
@@ -29,12 +33,20 @@ class Dashboard:
     def add_choke_alert(self, text: str) -> None:
         self.choke_alerts.appendleft(text)
 
+    def add_liquidation(self, event: BinanceCoinMForceOrderEvent) -> None:
+        self.recent_liquidations.appendleft(event)
+        if event.side == "SELL":
+            self.long_liq_notional += event.notional_usd
+        else:
+            self.short_liq_notional += event.notional_usd
+
     def render(self) -> Group:
         return Group(
             self._signal_panel(),
             self._imbalance_panel(),
             self._positions_panel(),
             self._journal_panel(),
+            self._liquidation_panel(),
             self._choke_panel(),
             Panel(str(self.feed_state.value), title="Active Feed Source", border_style="cyan"),
         )
@@ -97,3 +109,31 @@ class Dashboard:
             f"Parse failures: {stats.parse_failures}"
         )
         return Panel(body, title="Journal Stats", border_style="blue")
+
+    def _liquidation_panel(self) -> Panel:
+        total = self.long_liq_notional + self.short_liq_notional
+        long_width = int(self.long_liq_notional / total * 30) if total > 0 else 0
+        pressure = "█" * long_width + "░" * (30 - long_width)
+        table = Table(expand=True)
+        table.add_column("Time")
+        table.add_column("Side")
+        table.add_column("Notional")
+        table.add_column("Price")
+        for event in self.recent_liquidations:
+            table.add_row(
+                str(event.order_trade_time_ms),
+                "LONG LIQ" if event.side == "SELL" else "SHORT LIQ",
+                f"${event.notional_usd:,.0f}",
+                f"{(event.avg_price or event.price):.2f}",
+            )
+        return Panel(
+            Group(
+                Text(
+                    f"Long-liq pressure {pressure} Short-liq | "
+                    f"${self.long_liq_notional:,.0f} / ${self.short_liq_notional:,.0f}"
+                ),
+                table,
+            ),
+            title="Recent Liquidations",
+            border_style="bright_red",
+        )

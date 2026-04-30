@@ -11,18 +11,20 @@ DetectorName = Literal[
     "liquidity_grab",
     "stop_hunt",
     "order_book_imbalance",
+    "liquidation_cascade",
     "LiquidityGrabDetector",
     "StopHuntDetector",
     "OrderBookImbalanceDetector",
+    "LiquidationCascadeDetector",
 ]
 FeedSource = Literal[
     "blofin",
     "binance",
-    "aggr_trade",
+    "binance_coinm",
     "kraken",
     "BloFin-primary",
-    "Binance-fallback",
-    "aggr.trade-fallback",
+    "Binance-USDT-M-fallback",
+    "Binance-COIN-M-fallback",
     "HALTED",
 ]
 Action = Literal["long", "short", "pass"]

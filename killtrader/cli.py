@@ -11,7 +11,12 @@ from rich.table import Table
 from killtrader.config import load_settings
 from killtrader.core.bus import EventBus
 from killtrader.core.logger import configure_logging, get_logger
-from killtrader.detectors import LiquidityGrabDetector, OrderBookImbalanceDetector, StopHuntDetector
+from killtrader.detectors import (
+    LiquidationCascadeDetector,
+    LiquidityGrabDetector,
+    OrderBookImbalanceDetector,
+    StopHuntDetector,
+)
 from killtrader.execution.risk import RiskManager
 from killtrader.feeds.crossref import CrossReferenceCoordinator
 from killtrader.journal.paper_tracker import PaperOutcomeTracker
@@ -101,7 +106,11 @@ async def _run(settings) -> None:
         LiquidityGrabDetector(settings, bus),
         StopHuntDetector(settings, bus),
         OrderBookImbalanceDetector(settings, bus),
+        LiquidationCascadeDetector(settings, bus),
     ]
+    liquidation_detector = next(
+        detector for detector in detectors if isinstance(detector, LiquidationCascadeDetector)
+    )
     signal_engine = OllamaSignalEngine(settings, journal)
     risk = RiskManager(settings)
     _ = risk
@@ -138,6 +147,15 @@ async def _run(settings) -> None:
             alert = await bus.choke_alerts.get()
             dashboard.add_choke_alert(alert.message)
 
+    async def coinm_stream_loop() -> None:
+        await crossref.binance_coinm.run()
+
+    async def liquidation_loop() -> None:
+        while True:
+            event = await bus.coinm_force_orders.get()
+            dashboard.add_liquidation(event)
+            await liquidation_detector.on_force_order(event)
+
     async def dashboard_loop() -> None:
         while True:
             dashboard.journal_stats = journal.stats
@@ -146,7 +164,14 @@ async def _run(settings) -> None:
 
     with dashboard.live() as live:
         try:
-            await _run_supervised_tasks(feed_loop, signal_loop, alert_loop, dashboard_loop)
+            await _run_supervised_tasks(
+                feed_loop,
+                signal_loop,
+                alert_loop,
+                coinm_stream_loop,
+                liquidation_loop,
+                dashboard_loop,
+            )
         except BaseExceptionGroup as exc_group:
             terminal_error = _first_terminal_error(exc_group)
             if terminal_error is None:
@@ -161,6 +186,7 @@ async def _run(settings) -> None:
                 terminal_error,
             ) from terminal_error
         finally:
+            await crossref.binance_coinm.close()
             await journal.stop()
 
 
