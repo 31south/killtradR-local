@@ -3,12 +3,17 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections.abc import AsyncIterator
+from importlib import metadata
 from time import time_ns
 from typing import Any
 
 from killtrader.config import Settings
 from killtrader.core.bus import Candle, OrderBookLevel, OrderBookSnapshot
-from killtrader.core.errors import ExchangeExecutionError, SourceUnavailableError
+from killtrader.core.errors import (
+    DemoNotSupportedError,
+    ExchangeExecutionError,
+    SourceUnavailableError,
+)
 from killtrader.core.logger import get_logger
 
 log = get_logger(__name__)
@@ -40,6 +45,14 @@ class BloFinMarketFeed:
     async def close(self) -> None:
         if self._exchange is not None:
             await self._exchange.close()
+            self._exchange = None
+
+    async def __aenter__(self) -> BloFinMarketFeed:
+        await self.connect()
+        return self
+
+    async def __aexit__(self, *_exc_info: object) -> None:
+        await self.close()
 
     async def fetch_order_book_once(self) -> OrderBookSnapshot:
         if self._exchange is None:
@@ -117,27 +130,45 @@ class BloFinExchange:
     async def connect(self) -> None:
         self._require_credentials()
         if self.settings.use_demo:
-            raise ExchangeExecutionError(
-                "installed blofin package does not expose DemoClient; keep "
-                "TRADE_ENABLED=false or set USE_DEMO=false only for intentional "
-                "live execution"
-            )
+            validate_demo_mode_supported(self.settings)
         try:
-            from blofin.client import BloFinClient, PublicAPI, TradingAPI  # type: ignore
+            import blofin.client as blofin_client  # type: ignore
         except Exception as exc:  # pragma: no cover - depends on user install
             raise ExchangeExecutionError(
                 "blofin package is not importable; install project dependencies"
             ) from exc
 
-        self._client = BloFinClient(
+        client_cls = (
+            blofin_client.DemoClient if self.settings.use_demo else blofin_client.BloFinClient
+        )
+
+        self._client = client_cls(
             api_key=self.settings.blofin_api_key,
             api_secret=self.settings.blofin_secret,
             passphrase=self.settings.blofin_passphrase,
             use_server_time=True,
         )
-        self._market_api = PublicAPI(self._client)
-        self._trading_api = TradingAPI(self._client)
+        self._market_api = blofin_client.PublicAPI(self._client)
+        self._trading_api = blofin_client.TradingAPI(self._client)
         log.info("blofin_connected", demo=self.settings.use_demo, symbol=self.settings.symbol)
+
+    async def close(self) -> None:
+        client = self._client
+        close = getattr(client, "close", None) if client is not None else None
+        if close is not None:
+            result = close()
+            if inspect.isawaitable(result):
+                await result
+        self._client = None
+        self._market_api = None
+        self._trading_api = None
+
+    async def __aenter__(self) -> BloFinExchange:
+        await self.connect()
+        return self
+
+    async def __aexit__(self, *_exc_info: object) -> None:
+        await self.close()
 
     async def _call(self, func_name: str, *args: Any, **kwargs: Any) -> Any:
         if self._trading_api is None:
@@ -225,3 +256,28 @@ def order_book_from_raw(
     return OrderBookSnapshot(
         source=source, symbol=symbol, timestamp_ms=timestamp_ms, bids=bids, asks=asks
     )
+
+
+def blofin_sdk_version() -> str:
+    try:
+        return metadata.version("blofin")
+    except metadata.PackageNotFoundError:
+        return "not installed"
+
+
+def validate_demo_mode_supported(settings: Settings) -> None:
+    if not settings.use_demo:
+        return
+    version = blofin_sdk_version()
+    try:
+        import blofin.client as blofin_client  # type: ignore
+    except Exception as exc:  # pragma: no cover - depends on user install
+        raise DemoNotSupportedError(
+            "USE_DEMO=true is not supported because the blofin package is not importable. "
+            f"Installed blofin SDK version: {version}."
+        ) from exc
+    if not hasattr(blofin_client, "DemoClient"):
+        raise DemoNotSupportedError(
+            "USE_DEMO=true is not supported with installed blofin SDK version "
+            f"{version}. This SDK does not expose a DemoClient."
+        )

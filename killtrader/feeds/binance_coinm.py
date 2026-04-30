@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import AsyncIterator
+from contextlib import suppress
 from time import time_ns
 from typing import Any, Literal
 
@@ -117,6 +118,12 @@ class BinanceCoinMFeed:
     async def close(self) -> None:
         await self._client.aclose()
 
+    async def __aenter__(self) -> BinanceCoinMFeed:
+        return self
+
+    async def __aexit__(self, *_exc_info: object) -> None:
+        await self.close()
+
     async def run(self) -> None:
         consecutive_parse_errors = 0
         backoff_seconds = 1.0
@@ -193,6 +200,8 @@ class BinanceCoinMFeed:
                 yield await queue_bus.coinm_force_orders.get()
         finally:
             task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
             await feeder.close()
 
     async def fetch_order_book_once(self) -> OrderBookSnapshot:

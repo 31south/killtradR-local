@@ -20,3 +20,7 @@ class RiskLimitExceededError(KillTraderError):
 
 class ExchangeExecutionError(KillTraderError):
     """Raised when exchange execution fails after retries."""
+
+
+class DemoNotSupportedError(KillTraderError):
+    """Raised when USE_DEMO=true is requested but the installed SDK cannot support it."""
