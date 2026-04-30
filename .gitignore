@@ -1,0 +1,33 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+
+# Runtime artifacts
+logs/
+*.log
+
+# Signal journal (local trading data — never commit)
+*.journal.db
+*.journal.db-wal
+*.journal.db-shm
+killtrader.journal.db*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
