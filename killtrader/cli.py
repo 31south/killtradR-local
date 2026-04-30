@@ -10,6 +10,7 @@ from rich.table import Table
 
 from killtrader.config import load_settings
 from killtrader.core.bus import EventBus
+from killtrader.core.errors import DemoNotSupportedError
 from killtrader.core.logger import configure_logging, get_logger
 from killtrader.detectors import (
     LiquidationCascadeDetector,
@@ -17,6 +18,7 @@ from killtrader.detectors import (
     OrderBookImbalanceDetector,
     StopHuntDetector,
 )
+from killtrader.exchange.blofin import validate_demo_mode_supported
 from killtrader.execution.risk import RiskManager
 from killtrader.feeds.crossref import CrossReferenceCoordinator
 from killtrader.journal.paper_tracker import PaperOutcomeTracker
@@ -65,7 +67,11 @@ def run(
     settings.verbose = verbose or settings.verbose
     configure_logging(settings.log_level)
     try:
+        validate_demo_mode_supported(settings)
         asyncio.run(_run(settings))
+    except DemoNotSupportedError as exc:
+        _print_demo_mode_banner(exc)
+        raise typer.Exit(1) from exc
     except KeyboardInterrupt:
         console.print("[yellow]killtradR shutdown requested; exiting cleanly.[/yellow]")
         raise typer.Exit(0) from None
@@ -186,8 +192,25 @@ async def _run(settings) -> None:
                 terminal_error,
             ) from terminal_error
         finally:
-            await crossref.binance_coinm.close()
+            await crossref.close()
             await journal.stop()
+
+
+def _print_demo_mode_banner(exc: DemoNotSupportedError) -> None:
+    console.print(
+        Panel.fit(
+            f"{exc}\n\n"
+            "Options:\n"
+            "  1. Upgrade or downgrade blofin to a version that supports demo mode, "
+            "if one exists.\n"
+            "  2. Set USE_DEMO=false and TRADE_ENABLED=false for a safe signals-only "
+            "run\n"
+            "     against real public market data with no order execution.\n\n"
+            "Exiting.",
+            title="[bold red]BloFin demo mode unavailable[/bold red]",
+            border_style="red",
+        )
+    )
 
 
 def _first_terminal_error(exc: BaseException) -> BaseException | None:

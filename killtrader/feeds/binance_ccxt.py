@@ -32,6 +32,14 @@ class BinancePerpFeed:
     async def close(self) -> None:
         if self._exchange is not None:
             await self._exchange.close()
+            self._exchange = None
+
+    async def __aenter__(self) -> BinancePerpFeed:
+        await self.connect()
+        return self
+
+    async def __aexit__(self, *_exc_info: object) -> None:
+        await self.close()
 
     async def fetch_order_book_once(self) -> OrderBookSnapshot:
         if self._exchange is None:

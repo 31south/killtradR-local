@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections import deque
 from collections.abc import Awaitable, Callable
 from enum import Enum
@@ -101,6 +102,17 @@ class CrossReferenceCoordinator:
             raise NoDataAvailableError(
                 "all configured real OHLCV sources failed; trading halted"
             ) from coinm_error
+
+    async def close(self) -> None:
+        results = await asyncio.gather(
+            self.blofin_market.close(),
+            self.binance.close(),
+            self.binance_coinm.close(),
+            return_exceptions=True,
+        )
+        for result in results:
+            if isinstance(result, Exception):
+                log.warning("market_source_close_failed", error=str(result))
 
     async def _maybe_log_coinm_basis(self, coinm_snapshot: OrderBookSnapshot) -> None:
         try:

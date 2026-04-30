@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from collections import deque
 
-from rich.console import Group
+from rich.console import Console, Group
+from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
@@ -40,19 +41,40 @@ class Dashboard:
         else:
             self.short_liq_notional += event.notional_usd
 
-    def render(self) -> Group:
-        return Group(
-            self._signal_panel(),
-            self._imbalance_panel(),
-            self._positions_panel(),
-            self._journal_panel(),
-            self._liquidation_panel(),
-            self._choke_panel(),
-            Panel(str(self.feed_state.value), title="Active Feed Source", border_style="cyan"),
+    def render(self) -> Layout:
+        layout = Layout(name="root")
+        layout.split_column(
+            Layout(name="signals", ratio=3),
+            Layout(name="market", ratio=2),
+            Layout(name="state", ratio=2),
+            Layout(name="logs", ratio=2),
+        )
+        layout["market"].split_row(
+            Layout(name="imbalance"),
+            Layout(name="liquidations"),
+        )
+        layout["state"].split_row(
+            Layout(name="positions"),
+            Layout(name="journal"),
+        )
+        layout["logs"].split_row(
+            Layout(name="choke"),
+            Layout(name="feed"),
         )
 
-    def live(self) -> Live:
-        return Live(self.render(), refresh_per_second=4, screen=False)
+        layout["signals"].update(self._signal_panel())
+        layout["imbalance"].update(self._imbalance_panel())
+        layout["liquidations"].update(self._liquidation_panel())
+        layout["positions"].update(self._positions_panel())
+        layout["journal"].update(self._journal_panel())
+        layout["choke"].update(self._choke_panel())
+        layout["feed"].update(
+            Panel(str(self.feed_state.value), title="Active Feed Source", border_style="cyan")
+        )
+        return layout
+
+    def live(self, console: Console | None = None) -> Live:
+        return Live(self.render(), console=console, refresh_per_second=6, screen=True)
 
     def _signal_panel(self) -> Panel:
         table = Table(expand=True)
